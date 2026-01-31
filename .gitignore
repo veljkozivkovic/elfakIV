@@ -9,6 +9,7 @@
 *.jpeg
 *.png
 *.emf
+*.ipch 
 
 # User-specific files
 *.rsuser
