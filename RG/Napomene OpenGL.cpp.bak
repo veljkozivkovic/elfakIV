@@ -1,0 +1,1334 @@
+//========================================= PRVI LAB =========================================
+
+// PRIPREMA PROJEKTA
+
+// Reshape
+void CGLRenderer::Reshape(CDC* pDC, int w, int h)
+{
+
+	wglMakeCurrent(pDC->m_hDC, m_hrc);
+	{
+		glViewPort(0, 0, (GLsizei) w, (GLsizei) h);
+		double aspect = (double) w / h;
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(40, aspect, 0.1, 1000);
+		glMatrixMode(GL_MODELVIEW);
+	}
+	wglMakeCurrent(NULL, NULL);
+}
+
+
+// PrepareScene
+void CGLRenderer::PrepareScene(CDC *pDC)
+{
+	wglMakeCurrent(pDC->m_hDC, m_hrc);
+	//---------------------------------
+	glClearColor(1, 1, 1, 1); // pozadina
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_NORMALIZE);
+	//---------------------------------
+	wglMakeCurrent(NULL, NULL);
+}
+
+// DrawScene 
+
+void CGLRenderer::DrawScene(CDC *pDC)
+{
+	wglMakeCurrent(pDC->m_hDC, m_hrc);
+	//---------------------------------
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
+	this->CalculatePosition();
+	
+	//...
+	
+	glFlush();
+	SwapBuffers(pDC->m_hDC);
+	//---------------------------------
+	wglMakeCurrent(NULL, NULL);
+}
+
+
+// KAKO SE NAMESTA KAMERATA
+// ALOOOOOOOOOOOOOOO glLoadIdentity() ZOVES PRE CALCULATEPOSITION
+
+// U CGLRenderer deklaraciji klase:
+
+double angleXY = 30;
+double angleXZ = 90;
+
+double eyeR = 120;
+
+double eyeX = 0;
+double eyeY = 0;
+double eyeZ = 0;
+
+double centerX = 0;
+double centerY = 30;
+double centerZ = 0;
+
+double upX = 0;
+double upY = 1;
+double upZ = 0;
+
+// Napravis funkciju CalculatePosition():
+
+void CGLRenderer::CalculatePosition()
+{
+	eyeX = eyeR * cos(toRad(angleXY)) * cos(toRad(angleXZ));
+	eyeY = eyeR * sin(toRad(angleXY));
+	eyeZ = eyeR * cos(toRad(angleXY)) * sin(toRad(angleXZ));
+	gluLookAt(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ);
+}
+
+// U GLKView pravis preko classView OnMouseWheel, OnMouseMove i OnKeyDown
+
+BOOL CGLKView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	if( zDelta > 0)
+	{
+		m_glRenderer.eyeR -= 5;
+		Invalidate();
+	}
+	else if(zDelta < 0)
+	{
+		m_glRenderer.eyeR += 5;
+		Invalidate();
+	}
+
+	return CView::OnMouseWheel(nFlags, zDelta, pt);
+}
+
+void CGLKView::OnMouseMove(UINT nFlags, CPoint point)
+{
+	static CPoint prev;
+	
+	if (nFlags && MK_LBUTTON)
+	{
+		CPoint delta = point - prev;
+		m_glRenderer.angleXY -= toRad(delta.y);
+		m_glRenderer.angleXZ += toRad(delta.x);
+		Invalidate();
+	}
+	
+	prev = point;
+	
+	CView::OnMouseMove(nFlags, point);
+}
+
+
+void CGLKView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	if (nChar == VK_UP)
+	{
+		m_glRenderer.viewAngleXY += PI ;
+		Invalidate();// OBAVEZNO!!!
+	}
+	else if (nChar == VK_DOWN)
+	{
+		m_glRenderer.viewAngleXY -= PI ;
+		Invalidate();// OBAVEZNO!!!
+	}
+	if (nChar == VK_LEFT)
+	{
+		m_glRenderer.viewAngleXZ+= PI ;
+		Invalidate();// OBAVEZNO!!!
+	}
+	else if (nChar == VK_RIGHT)
+	{
+		m_glRenderer.viewAngleXZ -= PI ;
+		Invalidate();// OBAVEZNO!!!
+	}
+
+	
+	
+	
+	CView::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+
+// FIGURE ALO (fali jos kocka i trougao obican i vidi jos neki 3d objekti)
+// da l se treba zatvori GL_POLYGON?
+void CGLRenderer::DrawCube(float a)
+{
+    float h = a / 2.0f;
+
+    glBegin(GL_QUADS);
+    {
+        // FRONT (Z = 1)
+        glNormal3f(0, 0, 1);
+        glVertex3f(-h, -h,  h);
+        glVertex3f( h, -h,  h);
+        glVertex3f( h,  h,  h);
+        glVertex3f(-h,  h,  h);
+
+        // BACK (Z = -1) - Gledano od pozadi
+        glNormal3f(0, 0, -1);
+        glVertex3f( h, -h, -h);
+        glVertex3f(-h, -h, -h);
+        glVertex3f(-h,  h, -h);
+        glVertex3f( h,  h, -h);
+
+        // LEFT (X = -1)
+        glNormal3f(-1, 0, 0);
+        glVertex3f(-h, -h, -h);
+        glVertex3f(-h, -h,  h);
+        glVertex3f(-h,  h,  h);
+        glVertex3f(-h,  h, -h);
+
+        // RIGHT (X = 1)
+        glNormal3f(1, 0, 0);
+        glVertex3f( h, -h,  h);
+        glVertex3f( h, -h, -h);
+        glVertex3f( h,  h, -h);
+        glVertex3f( h,  h,  h);
+
+        // TOP (Y = 1)
+        glNormal3f(0, 1, 0);
+        glVertex3f(-h,  h,  h);
+        glVertex3f( h,  h,  h);
+        glVertex3f( h,  h, -h);
+        glVertex3f(-h,  h, -h);
+
+        // BOTTOM (Y = -1) - Orijentisano odozdo CCW
+        glNormal3f(0, -1, 0);
+        glVertex3f(-h, -h, -h);
+        glVertex3f( h, -h, -h);
+        glVertex3f( h, -h,  h);
+        glVertex3f(-h, -h,  h);
+    }
+    glEnd();
+}
+
+
+
+	
+
+
+void CGLRenderer::DrawCylinder(double h, double r1, double r2, int nSeg)
+{
+
+	double step = 2 * PI / nSeg;
+	
+	
+	// donja osovina
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, -1, 0);
+		glVertex3f(0, 0, 0);
+		for (int i = 0; i <= nSeg; i++)
+		{
+			glVertex3f(r1 * cos(step * i), 0, r1 * sin(step * i));
+		}
+	}
+	glEnd();
+
+
+
+	// gornja osovina
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, 1, 0);
+		glVertex3f(0, h, 0);
+		for (int i = 0; i <= nSeg; i++)
+		{
+			glVertex3f(r2 * cos(step * i), h, r2 * sin(step * i));
+		}
+	}
+	glEnd();
+
+	// omotac
+	float rd = r1 - r2; //UVEK R1 - R2
+	float len = sqrt(h*h + dr*dr);
+	float k = h / len;
+	float r = rd / len;
+	
+	glBegin(GL_QUAD_STRIP);
+	{
+		for (int i = 0; i < nSeg; i++)
+		{
+			glNormal3f( k * cos(step * i), r, k * sin(step * i)); 
+			
+			glVertex3f(r1 * cos(step * i), 0, r1 * sin(step * i));
+			glVertex3f(r2 * cos(step * i), h, r2 * sin(step * i));
+		}
+
+
+	}
+	glEnd();
+
+}
+
+void CGLRenderer::DrawCone(float r, float h, int nSeg)
+{
+
+	float s = 2 * PI / nSeg;
+	//glBindTexture(GL_TEXTURE_2D, grass);
+
+	// donja osovina
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, -1, 0);
+		
+		glTexCoord2f(0.5, 0.5);
+		glVertex3f(0, 0, 0);
+
+		for (int i = 0; i <= nSeg; i++)
+		{
+			glTexCoord2f(0.5 + 0.5 * cos(s * i), 0.5 + 0.5 * sin(s * i));
+			glVertex3f(r * cos(s * i), 0, r * sin(s * i));
+
+		}
+
+	}
+	glEnd();
+
+
+	// omotac
+
+
+	float len = sqrt(h * h + r * r);
+	float k = h / len;
+	float dr = r / len;
+
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, 1, 0); // Vrh kupe
+		glTexCoord2f(0.5, 0.5);
+		glVertex3f(0, h, 0);
+
+		// OVO JE KLJUCNA PROMENA: Idemo unazad da bi Winding Order bio CCW
+		for (int i = nSeg; i >= 0; i--)
+		{
+			glNormal3f(k * cos(s * i), dr, k * sin(s * i));
+			glTexCoord2f(0.5 + 0.5 * cos(s * i), 0.5 + 0.5 * sin(s * i));
+			glVertex3f(r * cos(s * i), 0, r * sin(s * i));
+		}
+
+	}
+	glEnd();
+
+	//glBindTexture(GL_TEXTURE_2D, 0);
+
+}
+
+// TRANSLATE SCALE ROTATE I MATRICE NAPOMENE
+ROTIRANJE SE VRSI OBRNUTO OD KAZALJKE NA SATU
+
+
+
+
+
+
+//========================================= DRUGI LAB =========================================
+
+// Normale na temena objekta imas vec napisano za crtanje objekata
+
+
+//- normale se definisu sa glNormal3f() pre poziva glVertex3f()
+//- normale moraju da budu jedinicni vektori
+//- sa glEnable(GL_NORMALIZE) omoguceno ti je da ispred jednog temena od npr kvadrata u GL_QUAD da postavis i omogucava ti da ti preracunava normale ako skejlujes
+//- Nije lose da se namesti glEnable(GL_LIGHTING) glEnable(GL_LIGHT0) posle drawAxis da ne utice na axis
+
+// Definisanje osobina materijala:
+
+//- Trebalo bi da napravis klasu ili strukturu koja pamti ambiant, diffuse, specular, emission i shininess i da setujes sve to i posle da selectujes
+//- Ambient: namestas koje je boje materijal kada nije osvetljen
+//- Diffuse: boja nekog predmeta bas kad je full pod svetlom dobrim
+//- Specular: koja je boja odsjaja npr onaj mali odsjaj na kuglu 
+//- Shinines: Koliki je taj mali odsjaj na kuglu ugl stavi na 64.0f ili 128.0f STO JE VECI BROJ TO JE MANJI TAJ ODSJAJ
+//- Emission: to je boje materijal koji je npr fluroscentan sam generise neku svetlost u mrak TO SE KORISTI ZA SIJALICE
+
+// Setovanje materijala je sa glMaterialf( GLenum { GL_FRONT ili GL_FRONT_AND_BACK ili GL_BACK}, GLenum {ime parametara jedan od gore navedenih}, float {niz parametara} )
+glPushMatrix();
+glMaterialfv(GL_FRONT, GL_AMBIENT, m_ambient);
+glMaterialfv(GL_FRONT, GL_DIFFUSE, m_diffuse);
+DrawSphere(...);
+glPopMatrix();
+
+
+
+
+// Definisanje svetla:
+
+//- omoguci svetlost nakon sto crtas objekte na koje ne treba da utice svetlost:
+glEnable(GL_LIGHTING)
+// moze i da disejblujes to sa
+glDisable(GL_LIGHTING)
+
+//- Svako svetlo mora da ima parametre ambient, diffuse i specular koji se kombinuju nekako sa tim atributima materijala objekta:
+// prvo enablujes svetlo
+
+glEnable(GL_LIGHT0)
+
+//namestis osobine
+glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_niz);
+glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_niz);
+glLightfv(GL_LIGHT0, GLSPECULAR, specular_niz);
+//postavis poziciju svetla
+
+float light_position[] = {1.0, 1.0, 1.0, 0.0} // 0.0 na kraj stavljas kad je izvor svetla sunce tj svi zraci su paralelni i ide na sve strane
+float light_position[] = {1.0, 1.0, 1.0, 1.0} // 1.0 na kraj znaci da je direkciono neko svetlo npr za lampu i u obliku kupe je
+glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+// atenuacija je kad intezitet svetla opada sa rastojanjem ali msm da je nebitno to
+
+// kad je diekciono svetlo moras da napravis GL_SPOT_DIRECTION i GL_SPOT_CUTOFF to su atributi koji definisu kupu koja u stvari je svetlost
+// direction je smer u kome a cutoff je ugao polovine kupe
+
+float spot_direction[] = { -1.0, -1.0, 0.0} ;
+glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
+glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, 45.0 ); // GL_SPOT_CUTOFF 
+
+// namesti u preparescene ambientalno svetlo:
+GLfloat lmodel_ambient[] = { 0.9, 0.9, 0.9, 1 };
+glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
+
+
+// pazi sad za svetla:
+Imas 3 vrste svetla:
+1) SUNCE l_pos = {x, y, z ,0 }
+l_pos = {0.0f, 1.0f, 0.0f, 0.0f}
+znaci da svetlo dolazi odozgo, znaci namestis amb,diff,spec i svetlo CEPA ako stavis x=1.0f i y = 1.0f znaci dolazi iz pravca gore desno
+
+2) TACKASTO SVETLO(BEZ GL_SPOT_DIRECTION i GL_SPOT_CUTOFF) l_pos = {x, y, z ,1 }
+to je svetlo u poziciji datoj x,y,z i ona svetli iz te tacke na sve strane, namestis amb,diff i spec i tjt svetlo CEPA
+
+3) BATERIJSKA LAMPA( SA GL_SPOT_CUTOFF i GL_SPOT_DIRECTION) l_pos = {x,y,z,1}
+namestis GL_SPOT_DIRECTION koji je jedinicni vektor pravca koji kaze u kom pravcu ide svetlo od te tacke, GL_SPOT_CUTOFF je poluprecnik valjka tog sto pravi svetlo
+
+- ako oces Da ti baterijska lampa prati posmatraca stavis l_pos = {0,0,0,1}, GL_SPOT_DIRECTIOn na {0,0,-1} namestis GL_SPOT_CUTOFF neki  I ZOVES PRE gluLookAt i tjt
+
+
+
+
+/ SAD ZAPRAVO SA LABA JEBAVANJA ALO SVETLO NAMESTAS POSLE GLULOOKAT
+/ MOZE NAMESTAS NORMALE VAN GLBEGIN I AKO GLROTATEF RADIS CE NAMESTI SAM LEPO NORMALE
+
+
+
+
+// NAPRAVI KLASU ZA MATERIJALE i u CGLRenderer dodaj #include "CGLMaterial.h":
+#pragma once
+#include "StdAfx.h"
+#include "GL\gl.h"
+#include "GL\glu.h"
+#include "GL\glaux.h"
+#include "GL\glut.h"
+
+class CGLMaterial
+{
+public:
+	CGLMaterial();
+	~CGLMaterial();
+
+	void SetFace(GLenum face = GL_FRONT);
+	void SetAmbient(float* a);
+	void SetDiffuse(float* d);
+	void SetSpecular(float* s);
+	void SetEmission(float* e);
+	void SetShininess(float s);
+
+protected:
+	float m_ambient[4] = {};
+	float m_diffuse[4] = {};
+	float m_specular[4] = {};
+	float m_emission[4] = {};
+	float shininess = {};
+
+
+
+};
+
+CGLMaterial::CGLMaterial()
+{
+}
+
+CGLMaterial::~CGLMaterial()
+{
+}
+
+void CGLMaterial::SetFace(GLenum face)
+{
+	glMaterialfv(face, GL_AMBIENT, m_ambient);
+	glMaterialfv(face, GL_DIFFUSE, m_diffuse);
+	glMaterialfv(face, GL_SPECULAR, m_specular);
+	glMaterialfv(face, GL_EMISSION, m_emission );
+	glMaterialf(face, GL_SHININESS, shininess);
+
+
+}
+
+void CGLMaterial::SetAmbient(float* a)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		m_ambient[i] = a[i];
+	}
+}
+
+void CGLMaterial::SetDiffuse(float* d)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		m_diffuse[i] = d[i];
+	}
+}
+
+void CGLMaterial::SetSpecular(float* s)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		m_specular[i] = s[i];
+	}
+}
+
+void CGLMaterial::SetEmission(float* e)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		m_emission[i] = e[i];
+	}
+}
+
+void CGLMaterial::SetShininess(float s)
+{
+	shininess = s;
+}
+
+
+
+
+//========================================= TRECI LAB ========================================= /
+
+
+// Namestanje pocetno sta je bitno!
+
+//u CGLRenderer:
+
+UINT tsc;
+UINT m;
+UINT s;
+
+
+
+UINT LoadTexture(char* fileName)
+{
+	
+	UINT texID;
+	DImage img;
+	img.Load(CString(fileName));
+	img.Flip();
+	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenTexture(1, &texID);
+	glBindTexture(GL_TEXTURE_2D, id);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Ako oces samo zadnji piksel da nastavi GL_CLAMP umesto GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	
+	
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	
+	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, img.Width(), img.Height(), GL_BGRA_EXT, GL_UNSIGNED_BYTE, img.GetDIBBITS());
+	
+	return texID;
+	
+}
+
+/ U PrepareScene:
+tsc = LoadTexture("tsc.png");
+m = LoadTexture("m.png");
+s = LoadTexture("s.png");
+
+
+
+// U DestroyScene:
+
+glDeleteTextures(1, tsc);
+glDeleteTextures(1, m);
+glDeleteTextures(1, s);
+
+
+/ FIGURE SA TEKSTURE I NORMALE OBAVEZNO PRE CRTANJE glBindTexture(GL_TEXTURE_2D, id) i posle glBindTexture(GL_TEXTURE_2D, 0);
+
+void CGLRenderer::DrawCube(float a)
+{
+    float h = a / 2.0f;
+
+    glBegin(GL_QUADS);
+    {
+        // FRONT (Z = 1)
+        glNormal3f(0, 0, 1);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-h, -h,  h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( h, -h,  h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( h,  h,  h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-h,  h,  h);
+
+        // BACK (Z = -1)
+        glNormal3f(0, 0, -1);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f( h, -h, -h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(-h, -h, -h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(-h,  h, -h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f( h,  h, -h);
+
+        // LEFT (X = -1)
+        glNormal3f(-1, 0, 0);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-h, -h, -h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(-h, -h,  h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(-h,  h,  h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-h,  h, -h);
+
+        // RIGHT (X = 1)
+        glNormal3f(1, 0, 0);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f( h, -h,  h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( h, -h, -h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( h,  h, -h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f( h,  h,  h);
+
+        // TOP (Y = 1)
+        glNormal3f(0, 1, 0);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-h,  h,  h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( h,  h,  h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( h,  h, -h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-h,  h, -h);
+
+        // BOTTOM (Y = -1)
+        glNormal3f(0, -1, 0);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-h, -h, -h);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( h, -h, -h);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( h, -h,  h);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-h, -h,  h);
+    }
+    glEnd();
+}
+
+
+void CGLRenderer::DrawSphere(float r, int nSegA, int nSegB)
+{
+	float stepA = PI / nSegA;      // visina (samo π)
+	float stepB = 2 * PI / nSegB;  // širina
+
+	for (int i = 0; i < nSegA; i++)
+	{
+		float a1 = -PI / 2 + i * stepA;
+		float a2 = -PI / 2 + (i + 1) * stepA;
+
+		glBegin(GL_QUAD_STRIP);
+		{
+			for (int j = 0; j <= nSegB; j++)
+			{
+				float b = j * stepB;
+
+				float s = (float)j / nSegB;        // cela sirina
+				float t1 = (float)i / nSegA * 0.5f;   // pola visine teksture ZATO 0.5f
+				float t2 = (float)(i + 1) / nSegA * 0.5f;
+
+				// prvi red
+				float x = cos(a1) * cos(b);
+				float y = sin(a1);
+				float z = cos(a1) * sin(b);
+
+				glNormal3f(x, y, z);
+				glTexCoord2f(s, t1);
+				glVertex3f(r * x, r * y, r * z);
+
+				// drugi red
+				float x2 = cos(a2) * cos(b);
+				float y2 = sin(a2);
+				float z2 = cos(a2) * sin(b);
+
+				glNormal3f(x2, y2, z2);
+				glTexCoord2f(s, t2);
+				glVertex3f(r * x2, r * y2, r * z2);
+			}
+		}
+		glEnd();
+	}
+}
+
+
+void CGLRenderer::DrawCylinder(double h, double r1, double r2, int nSeg)
+{
+	
+	float step = 2 * PI / nSeg;
+	
+	//donji krug
+	
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, -1, 0);
+		glTexCoord2f(0.5f, 0.5f); // vezes centar kruga za centar teksture
+		glVertex3f(0, 0,0);
+		for(int i = 0; i <= nSeg;i++)
+		{
+			glTexCoord2f(0.5f + 0.5f * cos(step * i), 0.5f + 0.5f * sin(step * i));
+			glVertex3f(r1 *cos( step * i), 0,  r1* sin(step * i));
+		}
+		
+	}
+	glEnd();
+	
+	
+	// gornji krug
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, 1,0);
+		glTexCoord2f(0.5f, 0.5f);
+		glVertex3f(0,h,0);
+		for(int i = 0; i <= nSeg; i++)
+		{
+			glTexCoord2f(0.5f + 0.5f * cos(step * i), 0.5f + 0.5f * sin(step * i);
+			glVertex3f(r2 * cos(step * i), h, r2 * sin(step * i));
+		}
+		
+	}
+	glEnd();
+	
+	
+	
+	
+	// omotach
+	float dr = r1 - r2;
+	float len = sqrt(h*h + dr * dr);
+	float k = h / len;
+	gloat r = dr / len;
+	
+	glBegin(GL_QUAD_STRIP);
+	{
+		
+		for(int i = 0; i <= nSeg; i++)
+		{
+			float se = (float) i / nSeg;
+			glNormal3f( k * cos(step * i), r, k * sin(step * i));
+			
+			glTexCoord2f(se, 0.0f); // donje teme
+			glVertex3f(r1 * cos(step * i), 0, r1 * sin(step * i));
+			
+			glTexCoord2f(se, 1.0f); //gornje teme
+			glVertex3f(r2 * cos(step * i), h, r2 * sin(step * i));
+		}
+		
+	}
+	glEnd();
+	
+	
+
+	
+}
+
+
+
+void CGLRenderer::DrawCone(float r, float h, int nSeg)
+{
+
+	float s = 2 * PI / nSeg;
+	//glBindTexture(GL_TEXTURE_2D, grass);
+
+	// donja osovina
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, -1, 0);
+		
+		glTexCoord2f(0.5, 0.5);
+		glVertex3f(0, 0, 0);
+
+		for (int i = 0; i <= nSeg; i++)
+		{
+			glTexCoord2f(0.5 + 0.5 * cos(s * i), 0.5 + 0.5 * sin(s * i));
+			glVertex3f(r * cos(s * i), 0, r * sin(s * i));
+
+		}
+
+	}
+	glEnd();
+
+
+	// omotac
+
+
+	float len = sqrt(h * h + r * r);
+	float k = h / len;
+	float dr = r / len;
+
+	glBegin(GL_TRIANGLE_FAN);
+	{
+		glNormal3f(0, 1, 0); // Vrh kupe
+		glTexCoord2f(0.5, 0.5);
+		glVertex3f(0, h, 0);
+
+		// OVO JE KLJUCNA PROMENA: Idemo unazad da bi Winding Order bio CCW
+		for (int i = nSeg; i >= 0; i--)
+		{
+			glNormal3f(k * cos(s * i), dr, k * sin(s * i));
+			glTexCoord2f(0.5 + 0.5 * cos(s * i), 0.5 + 0.5 * sin(s * i));
+			glVertex3f(r * cos(s * i), 0, r * sin(s * i));
+		}
+
+	}
+	glEnd();
+
+	//glBindTexture(GL_TEXTURE_2D, 0);
+
+}
+
+
+
+
+// ===========================01 2015.===============================================
+
+// DrawPatch funkcija koja na osnovu x i y koordinate "na papiru" crta u pod uglom papiru
+
+void inverseTSC(double x,double  y,double&  phi,double & theta)
+{
+	phi = atan(x) ;
+	theta = atan(y * cos(phi));
+
+}
+
+
+// ovi trouglovi idu u smeru obrnutom od kazaljke na satu
+void CGLRenderer::DrawPatch(double R, int n)
+{
+	double delta = 2. / (double)n; // to je korak
+	double y = 1.0; // y je 1.0 jer se krece od gornje leve tacke -1.0 1.0 i idu po redovima
+	for (int i = 0; i <n;i++)
+	{
+		glBegin(GL_TRIANGLE_STRIP)
+		{
+			double x = -1.0;
+			
+			for(int j = 0; j <=n; j++)
+			{
+				inverseTSC(x, y, phi, theta);
+			
+				double xd, yd, zd;
+				
+				// ovo je isto ko za oci i za sferu samo obrni x i z2
+				xd = R * cos(theta) * sin(phi);
+				yd = R * sin(theta);
+				zd = R * cos(thata) * cos(phi);
+				
+				glNormal3d(xd/R, yd /R, zd / R);
+				glTexCoord2f((x + 1.0) / 2.0, (-y + 1.0) / 2.0);
+				glVertex3f(xd, yd, zd);
+				
+				inverseTSC(x,y - delta, phi, theta); // sad teme ispod
+				
+				xd = R * cos(theta) * sin(phi);
+				yd = R * sin(theta);
+				zd = R * cos(thata) * sin(phi);
+				
+				glNormal3d(xd/R, yd /R, zd / R);
+				glTexCoord2f((x + 1.0) / 2.0, (-y + delta  + 1.0) / 2.0);
+				glVertex3f(xd, yd, zd);	
+				
+				x += delta;
+				
+				
+				
+			}
+		}
+		glEnd();
+		
+		y -= delta;
+		
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+}
+
+
+
+
+// ===========================02 2018.===============================================
+
+// sin = naspramna / hipotenuza 
+// cos = nalegla / hipotenuza
+// tan = naspramna / nalegla 
+
+atan2(naspramna, nalegla) vraca ugao izmedju njih 
+
+	|\
+	|a\
+d2	|  \  d3
+	|   \
+	|    \
+	|_____\
+       d1
+
+
+// ovde je hipotenuza poravnata na teksturu da bi mogla da se ponavlja vise puta
+
+void CGLRenderer::DrawTriangle(float d1, float d2, float rep)
+{
+	double ang = atan(d2,d1);
+	double d3 = sqrt(d2*d2 + d1*d1);
+	
+	double y = d1 * cos(ang) / d3; // projekcija za visinu na hipotenuzu
+	double x = d1 * sin(ang) / d3; // projekcija za sirinu na hipotenuzu
+
+	glBegin(GL_TRIANGLES);
+	{
+		glNormal3f(0,0,1);
+		
+		glTexCoord2f(0.5 * rep, 0);
+		glVertex3f(0,0,0);
+		
+		glTexCoord2f((0.5 + x) * rep, y * rep);
+		glVertex3f(d1,0,0);
+		
+		
+		glTexCoord2f(0.5 * rep, 1.0 * rep);
+		glVertex3f(d1,d2,0);
+		
+		
+	}
+	glEnd();
+	
+	
+	
+}
+
+
+// ===========================02 2020.=============================================== - TODO ISPISI CRTANJE SVEGA ZA TEKSTURE ZAJEBANO
+
+
+
+// KAKO DA NACRTAS NAJBRZE STRANICE:
+void CGLRenderer::DrawEnvCube(double a)
+{
+	glEnable(GL_CULL_FACE);
+	
+	//glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
+
+	float h = a / 2.0f;
+
+	glPushMatrix();
+	{
+		UINT sides[6] = { front, left, back, right, top, bot };
+
+		for (int i = 0; i < 4; i++)
+		{
+			glPushMatrix();
+
+			glRotatef(90 * i, 0, 1, 0);
+			glBindTexture(GL_TEXTURE_2D, sides[i]);
+
+			glBegin(GL_QUADS);
+			{
+				glTexCoord2f(0, 0); glVertex3f(-h, h, -h);
+				glTexCoord2f(0, 1); glVertex3f(-h, -h, -h);
+				glTexCoord2f(1, 1); glVertex3f(h, -h, -h);
+
+				glTexCoord2f(1, 0); glVertex3f(h, h, -h);
+			}
+			glEnd();
+
+			glPopMatrix();
+
+		}
+
+		
+		
+
+		glRotatef(-90, 1, 0, 0);
+
+		glBindTexture(GL_TEXTURE_2D, sides[4]);
+		glBegin(GL_QUADS);
+		{
+			glTexCoord2d(0, 0);
+			glVertex3f(-h, h, h);
+
+			glTexCoord2d(0, 1);
+			glVertex3f(h, h, h);
+
+
+			glTexCoord2d(1, 1);
+			glVertex3f(h, -h, h);
+
+
+			glTexCoord2d(1, 0);
+			glVertex3f(-h, -h, h);
+		}
+		glEnd();
+
+		glRotatef(-180, 1, 0, 0);
+		glBindTexture(GL_TEXTURE_2D, sides[5]);
+		glBegin(GL_QUADS);
+		{
+			glTexCoord2d(0, 0);
+			glVertex3f(-h, h, h);
+
+			glTexCoord2d(0, 1);
+			glVertex3f(h, h, h);
+
+
+			glTexCoord2d(1, 1);
+			glVertex3f(h, -h, h);
+
+
+			glTexCoord2d(1, 0);
+			glVertex3f(-h, -h, h);
+		}
+		glEnd();
+
+	}
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glPopMatrix();
+	//glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_LIGHTING);
+
+}
+
+
+
+// ===========================02 2016.=============================================== 
+
+
+
+
+
+
+
+void CGLRenderer::DrawCube(float a)
+{
+	glBindTexture(GL_TEXTURE_2D, env);
+	float unitS = 0.25f;
+	float unitT = 1.0f / 3;
+
+	float gl[2];
+	float gd[2];
+	float dd[2];
+	float dl[2];
+
+	float h = a / 2.0f;
+	
+
+	// front 
+	glPushMatrix();
+	{
+		glRotatef(90 * 0, 0, 1, 0);
+		gl[0] = 1 * unitS;
+		gl[1] = 0;
+
+		gd[0] = 2 * unitS;
+		gd[1] = 0;
+
+		dd[0] = 2 * unitS;
+		dd[1] = 1 * unitT;
+
+		dl[0] = 1 * unitS;
+		dl[1] = 1 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+	
+	//left
+	glPushMatrix();
+	{
+		glRotatef(90 * 1, 0, 1, 0);
+		gl[0] = 0;
+		gl[1] = 2 * unitT;
+
+		gd[0] = 0;
+		gd[1] = 1 * unitT;
+
+		dd[0] = 1* unitS;
+		dd[1] = 1 * unitT;
+
+		dl[0] = 1 * unitS;
+		dl[1] = 2 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+
+	//back
+	glPushMatrix();
+	{
+		glRotatef(90 * 2, 0, 1, 0);
+		gl[0] = 2 * unitS;
+		gl[1] = 3 * unitT;
+
+		gd[0] = 1 * unitS;
+		gd[1] = 3 * unitT;
+
+		dd[0] = 1 * unitS;
+		dd[1] = 2 * unitT;
+
+		dl[0] = 2 * unitS;
+		dl[1] = 2 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+	//right
+	glPushMatrix();
+	{
+		glRotatef(90 * 3, 0, 1, 0);
+		gl[0] = 3 * unitS;
+		gl[1] = 1 * unitT;
+
+		gd[0] = 3 * unitS;
+		gd[1] = 2 * unitT;
+
+		dd[0] = 2 * unitS;
+		dd[1] = 2 * unitT;
+
+		dl[0] = 2 * unitS;
+		dl[1] = 1 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+
+	//bot
+	glPushMatrix();
+	{
+		glRotatef(-90, 1, 0, 0);
+		gl[0] = 1 * unitS;
+		gl[1] = 1 * unitT;
+
+		gd[0] = 2 * unitS;
+		gd[1] = 1 * unitT;
+
+		dd[0] = 2 * unitS;
+		dd[1] = 2 * unitT;
+
+		dl[0] = 1 * unitS;
+		dl[1] = 2 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+
+	// top
+	glPushMatrix();
+	{
+		glRotatef(90, 1, 0, 0);
+		glRotatef(90, 0, 0, 1); //  OVO JE SAMO BITNO ZA GORE ROTIRAS SAD OKO Z OSE NE Y
+
+
+		gl[0] = 4 * unitS;
+		gl[1] = 1 * unitT;
+
+		gd[0] = 4 * unitS;
+		gd[1] = 2 * unitT;
+
+		dd[0] = 3 * unitS;
+		dd[1] = 2 * unitT;
+
+		dl[0] = 3 * unitS;
+		dl[1] = 1 * unitT;
+
+		DrawSide(gl, gd, dd, dl, h);
+	}
+	glPopMatrix();
+
+
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void CGLRenderer::DrawSide(float* gl, float* gd, float* dd, float* dl, float h)
+{
+
+	glBegin(GL_QUADS);
+	{
+		glTexCoord2f(gl[0], gl[1]);
+		glVertex3f(-h, h, -h);
+
+		glTexCoord2f(gd[0], gd[1]);
+		glVertex3f(h, h, -h);
+
+
+		glTexCoord2f(dd[0], dd[1]);
+		glVertex3f(h, -h, -h);
+
+
+
+		glTexCoord2f(dl[0], dl[1]);
+		glVertex3f(-h, -h, -h);
+	}
+	glEnd();
+
+
+}
+
+
+
+
+
+// ===========================02 2019.=============================================== 
+// obnovi kako oko specificne tacke vrtis, jedina zamerka mogo sam counter clockwise da ih redjam
+
+void CGLRenderer::DrawPolygon(POINTF* points, POINTF* texCoords, int n)
+{
+    glBegin(GL_TRIANGLE_FAN);
+	{
+		for (int i = 0; i < n; i++)
+		{
+			glTexCoord2f(texCoords[i].x, texCoords[i].y);
+			glVertex3f(points[i].x, points[i].y, 0);
+		}
+	}
+	glEnd();
+}
+
+
+void CGLRenderer::DrawExtrudedPolygon(POINTF* points, POINTF* texCoords, int n, float zh, float r, float g, float b)
+{
+    glColor3f(1,1, 1);
+
+	glPushMatrix();
+	{
+		glTranslatef(0, 0, zh / 2);
+		DrawPolygon(points, texCoords, n);
+
+	}
+	glPopMatrix();
+	glPushMatrix();
+	{
+		glTranslatef(0, 0, -zh / 2);
+		DrawPolygon(points, texCoords, n);
+
+	}
+	glPopMatrix();
+
+	glColor3f(r, g, b);
+
+	glBegin(GL_QUAD_STRIP);
+	{
+		for (int i = 0; i < n; i++)
+		{
+			glVertex3f(points[i].x, points[i].y, -zh /2 );
+			glVertex3f(points[i].x, points[i].y, zh / 2);
+
+		}
+		glVertex3f(points[0].x, points[0].y, -zh / 2);
+		glVertex3f(points[0].x, points[0].y, zh / 2);
+	}
+	glEnd();
+
+
+}
+
+// KAKO POZIVAS:
+
+void CGLRenderer::DrawBody()
+{
+	glBindTexture(GL_TEXTURE_2D, excavator);
+	POINTF* p = new POINTF[5];
+	float h = 4;
+	float w = 4;
+	p[0].x = - w / 2; p[0].y = h;
+	p[1].x = 0; p[1].y = h ;
+	p[2].x = w / 2; p[2].y = h/2;
+	p[3].x = w / 2; p[3].y = 0;
+	p[4].x = -w/2; p[4].y = 0;
+
+	POINTF* t = new POINTF[5];
+	float tUnit = 1.0f / 16.0f;
+
+	t[0].x = 8 * tUnit; t[0].y = 0;
+	t[1].x = 12 * tUnit; t[1].y = 0;
+	t[2].x = 16 * tUnit; t[2].y = 4 * tUnit;
+	t[3].x = 16 * tUnit; t[3].y = 8 * tUnit;
+	t[4].x = 8 * tUnit; t[4].y = 8 * tUnit;
+
+	DrawExtrudedPolygon(p, t, 5, 4, 0.96, 0.5, 0.12);
+
+	delete[] p;
+	delete[] t;
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+
+
+
+// ===========================02 2019.=============================================== 
+
+// ZA TIPKE 1 I 2 NPR ZA 1 JE PLUS UGAO ZA 2 JE MINUS UGAO
+
+
+
+
+
+// ===========================02 2023.=============================================== 
+// obnovi teksture i kako rotiras oko specificne tacke
+
+
+// ===========================02 2014.=============================================== 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// kako svetlo gleda od posmatraca: I ZOVES PRE CALCULATE POSITION
+void CGLRenderer::SetWhiteLight()
+{
+    // Pozicija (0,0,0,1) je centar kamere (tvoje oko)
+    float l_pos1[] = { 0.0f, 0.0f, 0.0f, 1.0f }; 
+    
+    // Boje 
+    float amb1[]  = { 0.3f, 0.3f, 0.3f, 1.0f }; 
+    float diff1[] = { 1.0f, 1.0f, 1.0f, 1.0f }; 
+    float spec1[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    // SMER: Mora biti (0,0,-1) da bi svetlelo pravo ispred tebe
+    float l_dir[] = { 0.0f, 0.0f, -1.0f }; 
+
+    glLightfv(GL_LIGHT1, GL_POSITION, l_pos1);
+    glLightfv(GL_LIGHT1, GL_AMBIENT,  amb1);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE,  diff1);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, spec1);
+
+    
+    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, l_dir);
+    glLightf(GL_LIGHT1,  GL_SPOT_CUTOFF, 15.0f);    // Ugao snopa (ukupno 30 stepeni)
+    glLightf(GL_LIGHT1,  GL_SPOT_EXPONENT, 5.0f);   // Koliko je svetlo fokusirano u centru
+}
+
+// I ZOVES PRE CALCULATE POSITION
+

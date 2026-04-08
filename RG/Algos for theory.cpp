@@ -1,0 +1,125 @@
+nagibni, inkrementalni, krug trigo algo, krug efik. trigo algo, krug polinomski, krug bersenhamov, dif1,dif2
+
+//nagibni
+
+y = m*x + b
+
+void Nagibni(CDC* pDC, int x0, int y0, int x1, int y1, COLORREF col)
+{
+	float m, y, b;
+	if(x0 != x1 && abs(m = (float)(y1-y0)/(x1 - x0)) < 1)
+	{
+		b = y0 - m * x0;
+		
+		for(int x = min(x0,x1); x<= max(x0,x1); x++)
+		{
+			float y = m * x + b;
+			writePixel(pDC, x, int(        , val);
+			
+		}
+	}
+	else
+	{
+		m = (float)(x1 - x0) / (y1 - y0);
+		b = x0 - m * y0;
+		for(int y = min(y0,y1); y<= max(y0,y1); y++)
+		{
+			float x = m * y + b;
+			writePixel(pDC, int(x + 0.5), y, val);
+		}
+	}		
+}
+
+
+void Inkrementalni(CDC* pDC, int x0, int y0, int x1, int y1, COLORREF val)
+{
+	
+	float m;
+	if(x1 != x0 && abs( m = (float)(y1 - y0) / (x1 - x0) ) < 1)
+	{
+		
+		float y = x0 < x1 ? y0 : y1;
+		for(int x = min(x0,x1); x<=max(x0,x1); x++)
+		{
+			writePixel(pDC, x, int(y + 0.5), val);
+			y += m;		
+		}
+	}
+	else
+	{
+		m = (x1 - x0) / (y1 - y0);
+		float x = y0 < y1 ? x0 : x1;
+		for(int y = min(y0,y1); y <= max(y0,y1); y++)
+		{
+			writePixel(pDC, int(x + 0.5), y, val);
+			x += m;
+		}		
+	}
+	
+}
+
+
+void CircleTrigo(CDC* pDC, int r, COLORREF val)
+{
+	float alpha;
+	float dvapi = 6.28;
+	float step = dvapi / ( 7.0f * r);
+	
+	int x, y;
+	
+	for(alpha = 0; alpha < dvapi; alpha += step)
+	{
+		x = int( r * cos(alpha) + 0.5);
+		y = int( r * sin(alpha) + 0.5);
+		writePixel(pDC, x, y, val);
+	}
+	
+}
+
+void WritePixel8(CDC* pDC, int x, int y, COLORREF val)
+{
+	writePixel(pDC, x, y, val);
+	writePixel(pDC, -x, y, val);
+	writePixel(pDC, x, -y, val);
+	writePixel(pDC, -x, -y, val);
+	writePixel(pDC, y, x, val);
+	writePixel(pDC, -y, x, val);
+	writePixel(pDC, y, -x, val);
+	writePixel(pDC, -y, -x, val);
+	
+}
+
+ide do pi / 4
+void CircleEfficientTrigo(CDC* pDC, int r, COLORREF val)
+{
+	
+	float alpha;
+	float dvapi = 6.28f;
+	float pi4 = dvapi / 8.0f;
+	float step = dvapi / (7.0f * r);
+	
+	int x, int y;
+	
+	for(alpha = 0; alpha <= pi4; alpha += step)
+	{
+		x = int(r * cos(alpha) + 0.5);
+		y = int(r * sin(alpha) + 0.5);
+		WritePixel8(pDC, x, y, val);	
+	}	
+}
+
+svodi se na ideju:
+
+x^2 + y^2 = r^2;
+
+
+void DrawCirclePolynomial(CDC* pDC, int r, COLORREF val)
+{
+	int xend = (int)(r / sqrt(2) + 0.5);
+	int x, y;
+	for(int x = 0; x <= xend; x++)
+	{
+		y = (int)( sqrt(r*r - x*x) + 0.5);
+		writePixel8(pdC, x, y, val);
+	}
+}
