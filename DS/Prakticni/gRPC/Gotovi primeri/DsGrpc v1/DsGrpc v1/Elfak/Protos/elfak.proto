@@ -1,0 +1,60 @@
+﻿syntax = "proto3";
+// Koristimo treću verziju protobuf sintakse (nema "required" polja)
+
+import "google/protobuf/empty.proto";
+// Uvozimo Google-ov ugrađeni Empty tip — kao "void" u C#
+// Koristimo ga kad metoda ne treba da vrati ništa konkretno
+
+option csharp_namespace = "Elfak";
+// Govori kompajleru: generisane C# klase smeštaj u namespace "Elfak"
+// Na klijentu je ovo "ElfakClient" — jedina razlika između ta dva proto fajla!
+
+package elfak;
+// Ime paketa u protobuf sistemu (za izbegavanje konflikta naziva)
+
+service Elfak {
+    rpc DodajStudenta(Student) returns (Poruka);
+    // UNARY: prima jedan Student, vraća jednu Poruka
+    // Client šalje → Server obradi → Server vrati
+
+    rpc DodajStudente(stream Student) returns (stream Poruka);
+    // BIDIRECTIONAL STREAMING: klijent šalje tok Studenata,
+    // server za svaki vraća Poruka u toku
+    // Oba toka su otvorena istovremeno
+
+    rpc ObrisiStudenta(Indeks) returns (google.protobuf.Empty);
+    // UNARY: prima Indeks, vraća prazno (ništa)
+
+    rpc ObrisiStudente(stream Indeks) returns (google.protobuf.Empty);
+    // CLIENT STREAMING: klijent šalje više Indeksa, server briše sve
+    // i na kraju vraća Empty
+
+    rpc PreuzmiStudenta(Indeks) returns (Student);
+    // UNARY: prima Indeks, vraća jednog Studenta
+
+    rpc PreuzmiStudente(IndeksOdDo) returns (stream Student);
+    // SERVER STREAMING: prima opseg, server šalje tok Studenata
+}
+
+message Student {
+    int32 brojIndeksa = 1;
+    // int32 = 32-bitni ceo broj, =1 je TAG (redni broj polja u binarnom formatu)
+    string imePrezime = 2;
+    // string tip, TAG=2
+}
+
+message Indeks {
+    int32 brojIndeksa = 1;
+    // Koristi se kad treba da pošaljemo samo broj indeksa
+}
+
+message IndeksOdDo {
+    int32 odBrojaIndeksa = 1;
+    int32 doBrojaIndeksa = 2;
+    // Opseg indeksa za preuzimanje više studenata
+}
+
+message Poruka {
+    string Text = 1;
+    // Tekstualni odgovor servera (npr. "Student uspesno dodat")
+}

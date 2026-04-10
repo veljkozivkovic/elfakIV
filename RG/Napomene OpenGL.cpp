@@ -390,7 +390,7 @@ glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, 45.0 ); // GL_SPOT_CUTOFF
 // namesti u preparescene ambientalno svetlo:
 GLfloat lmodel_ambient[] = { 0.9, 0.9, 0.9, 1 };
 glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
-glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
+Modeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
 
 
 // pazi sad za svetla:

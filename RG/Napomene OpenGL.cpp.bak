@@ -526,7 +526,7 @@ UINT LoadTexture(char* fileName)
 	UINT texID;
 	DImage img;
 	img.Load(CString(fileName));
-	img.Flip();
+	
 	
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glGenTexture(1, &texID);
